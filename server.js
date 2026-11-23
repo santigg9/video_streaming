@@ -89,7 +89,10 @@ const server = http.createServer(async (request, response) => {
 
   const isViewer = /^\/watch\/[A-Za-z0-9_-]{8,64}\/?$/.test(url.pathname);
   const pathname = isViewer ? '/watch.html' : url.pathname === '/' ? '/index.html' : url.pathname;
-  const allowedFiles = new Set(['/index.html', '/watch.html', '/styles.css', '/common.js', '/host.js', '/viewer.js', '/favicon.svg']);
+  const allowedFiles = new Set([
+    '/index.html', '/watch.html', '/styles.css', '/favicon.svg',
+    '/common.js', '/host.js', '/viewer.js', '/control-protocol.js', '/agent-link.js', '/remote-input.js',
+  ]);
 
   if (!allowedFiles.has(pathname) || !['GET', 'HEAD'].includes(request.method)) {
     response.writeHead(404, headers);

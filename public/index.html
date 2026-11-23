@@ -95,6 +95,35 @@
         </div>
       </div>
 
+      <section class="remote-control" aria-labelledby="remote-control-title">
+        <h2 id="remote-control-title">Control remoto</h2>
+        <div class="setting-field">
+          <label for="agent-token">Token del agente de este Mac</label>
+          <form id="agent-form" class="copy-row">
+            <input id="agent-token" type="password" autocomplete="off" spellcheck="false" placeholder="Pegá el token que muestra el agente">
+            <button id="agent-connect" class="copy-button" type="submit">Conectar</button>
+          </form>
+          <span id="agent-status" class="setting-help" role="status">Sin agente: solo se comparte video.</span>
+        </div>
+        <label class="check-field">
+          <input id="auto-approve" type="checkbox">
+          <span>Aceptar pedidos de control sin preguntar<small>Útil si nadie va a estar frente al Mac.</small></span>
+        </label>
+        <div id="control-request" class="control-box" role="alert" hidden>
+          <p><strong>El otro equipo pide controlar tu Mac.</strong> Va a poder mover el mouse y escribir.</p>
+          <div class="control-actions">
+            <button id="control-allow" class="small-button primary" type="button">Permitir</button>
+            <button id="control-deny" class="small-button" type="button">Rechazar</button>
+          </div>
+        </div>
+        <div id="control-active" class="control-box active" hidden>
+          <p><strong>El otro equipo está controlando tu Mac.</strong></p>
+          <div class="control-actions">
+            <button id="control-revoke" class="small-button" type="button">Quitar control</button>
+          </div>
+        </div>
+      </section>
+
       <details class="connection-details" id="host-details">
         <summary>Información de la conexión <span id="host-route-summary">Sin datos</span></summary>
         <dl class="metrics-grid">
@@ -113,7 +142,7 @@
 
       <div class="sharing-facts">
         <p><strong>Una persona</strong> puede ver esta transmisión.</p>
-        <p>Cualquiera que tenga el enlace puede entrar. Compartilo solo con quien corresponda.</p>
+        <p>Cualquiera que tenga el enlace puede entrar. Compartilo solo con quien corresponda, sobre todo si conectás el agente de control.</p>
       </div>
       <button id="stop-button" class="secondary-button" type="button">Dejar de compartir</button>
     </aside>

@@ -1,4 +1,6 @@
-import { Signaling, PeerConnection, ConnectionMonitor } from './common.js';
+import { Signaling, PeerConnection, ConnectionMonitor, INPUT_CHANNEL, INPUT_FAST_CHANNEL } from './common.js';
+import { AgentLink } from './agent-link.js';
+import { parseMessage, sanitizeInputEvent } from './control-protocol.js';
 
 const qualities = {
   high: { width: 1920, height: 1080, fps: 30, bitrate: 4_000_000, label: '1080p, 30 FPS y 4 Mbps' },
@@ -24,6 +26,15 @@ const elements = {
   transport: document.querySelector('#transport'),
   retry: document.querySelector('#retry-button'),
   routeSummary: document.querySelector('#host-route-summary'),
+  agentForm: document.querySelector('#agent-form'),
+  agentToken: document.querySelector('#agent-token'),
+  agentStatus: document.querySelector('#agent-status'),
+  autoApprove: document.querySelector('#auto-approve'),
+  controlRequest: document.querySelector('#control-request'),
+  controlActive: document.querySelector('#control-active'),
+  controlAllow: document.querySelector('#control-allow'),
+  controlDeny: document.querySelector('#control-deny'),
+  controlRevoke: document.querySelector('#control-revoke'),
 };
 
 let stream;
@@ -33,6 +44,24 @@ let monitor;
 let room;
 let viewerPresent = false;
 let qualityRevision = 0;
+let inputChannel = null;
+let controlState = 'none'; // none | requested | granted
+const agent = new AgentLink({ onStatus: renderAgentStatus });
+const TOKEN_KEY = 'puente-agent-token';
+const AUTO_APPROVE_KEY = 'puente-auto-approve';
+
+function storageGet(key) {
+  try { return localStorage.getItem(key) || ''; } catch { return ''; }
+}
+
+function storageSet(key, value) {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    // Sin almacenamiento: el token se pide de nuevo la próxima vez.
+  }
+}
 
 function setStatus(text, state = 'waiting') {
   elements.status.textContent = text;
@@ -135,6 +164,119 @@ function handlePeerState(state) {
   }
 }
 
+// ---------- Control remoto ----------
+
+function renderAgentStatus(status, info) {
+  const texts = {
+    idle: 'Sin agente: solo se comparte video.',
+    connecting: 'Buscando el agente en este Mac…',
+    unreachable: 'No encontramos el agente. Inicialo con "npm start" en la carpeta agent; reintentamos solos.',
+    lost: 'Se perdió la conexión con el agente; reintentando…',
+    unauthorized: 'El agente rechazó el token. Copialo de nuevo desde la terminal.',
+    replaced: 'Otra pestaña se conectó al agente. Volvé a conectar desde acá si querés usar esta.',
+  };
+  let text = texts[status] || '';
+  if (status === 'ready') {
+    const size = info?.screen?.width ? ` · pantalla ${info.screen.width}×${info.screen.height}` : '';
+    text = info?.accessibility === 'denied'
+      ? 'Agente conectado, pero le falta el permiso de Accesibilidad de macOS: el mouse y el teclado no van a funcionar.'
+      : `Agente conectado${size}. El otro equipo puede pedir control.`;
+  }
+  elements.agentStatus.textContent = text;
+  elements.agentStatus.dataset.state = status;
+  if (status !== 'ready' && controlState !== 'none') revokeControl('agent');
+}
+
+function sendControl(message) {
+  if (inputChannel?.readyState === 'open') inputChannel.send(JSON.stringify(message));
+}
+
+function sharingWholeScreen() {
+  return stream?.getVideoTracks()[0]?.getSettings().displaySurface === 'monitor';
+}
+
+function renderControl() {
+  elements.controlRequest.hidden = controlState !== 'requested';
+  elements.controlActive.hidden = controlState !== 'granted';
+}
+
+function grantControl() {
+  if (controlState !== 'requested') return;
+  if (!agent.ready) {
+    denyControl('agent');
+    return;
+  }
+  controlState = 'granted';
+  sendControl({ t: 'grant' });
+  renderControl();
+}
+
+function denyControl(reason = 'denied') {
+  controlState = 'none';
+  sendControl({ t: 'deny', reason });
+  renderControl();
+}
+
+function revokeControl(reason) {
+  const wasActive = controlState !== 'none';
+  controlState = 'none';
+  agent.send({ t: 'reset' });
+  if (wasActive) sendControl({ t: 'revoke', reason });
+  renderControl();
+}
+
+function handleControlRequest() {
+  if (controlState === 'granted') {
+    sendControl({ t: 'grant' });
+    return;
+  }
+  if (!agent.ready) {
+    sendControl({ t: 'deny', reason: 'agent' });
+    return;
+  }
+  if (!sharingWholeScreen()) {
+    sendControl({ t: 'deny', reason: 'surface' });
+    return;
+  }
+  controlState = 'requested';
+  renderControl();
+  if (elements.autoApprove.checked) grantControl();
+}
+
+function handleInputMessage(event, fromFastChannel) {
+  const message = parseMessage(event.data);
+  if (!message) return;
+
+  if (!fromFastChannel && message.t === 'req') {
+    handleControlRequest();
+    return;
+  }
+  if (!fromFastChannel && message.t === 'release') {
+    if (controlState !== 'none') revokeControl();
+    return;
+  }
+  if (controlState !== 'granted') return;
+  if (fromFastChannel && message.t !== 'm') return;
+
+  const input = sanitizeInputEvent(message);
+  if (input) agent.send(input);
+}
+
+function attachDataChannel(channel) {
+  if (channel.label === INPUT_CHANNEL) {
+    if (controlState !== 'none') revokeControl();
+    inputChannel = channel;
+    channel.addEventListener('message', (event) => handleInputMessage(event, false));
+    channel.addEventListener('close', () => {
+      if (inputChannel !== channel) return;
+      if (controlState !== 'none') revokeControl();
+      inputChannel = null;
+    });
+  } else if (channel.label === INPUT_FAST_CHANNEL) {
+    channel.addEventListener('message', (event) => handleInputMessage(event, true));
+  }
+}
+
 async function startSharing() {
   elements.start.disabled = true;
   elements.error.hidden = true;
@@ -147,6 +289,7 @@ async function startSharing() {
     const quality = qualities[elements.quality.value];
     stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
+        displaySurface: 'monitor',
         width: { ideal: quality.width, max: quality.width },
         height: { ideal: quality.height, max: quality.height },
         frameRate: { ideal: quality.fps, max: quality.fps },
@@ -169,7 +312,11 @@ async function startSharing() {
     await applyQuality(null);
 
     stream.getVideoTracks()[0].addEventListener('ended', stopSharing);
-    peer = new PeerConnection('host', null, { onTrack: () => {}, onState: handlePeerState });
+    peer = new PeerConnection('host', null, {
+      onTrack: () => {},
+      onState: handlePeerState,
+      onDataChannel: attachDataChannel,
+    });
     monitor = new ConnectionMonitor(() => peer?.peer, 'host', renderMetrics);
     monitor.start();
     signaling = new Signaling(room, 'host', {
@@ -186,6 +333,7 @@ async function startSharing() {
           await startPeer();
         } else if (message.type === 'peer-left' && message.role === 'viewer') {
           viewerPresent = false;
+          revokeControl();
           peer.close();
           renderMetrics(null);
           setStatus('Esperando que abran el enlace');
@@ -209,6 +357,8 @@ async function startSharing() {
 }
 
 function stopSharing() {
+  revokeControl();
+  inputChannel = null;
   signaling?.send({ type: 'stream-stopped' });
   signaling?.close();
   monitor?.stop();
@@ -256,3 +406,24 @@ elements.link.addEventListener('click', () => elements.link.select());
 elements.quality.addEventListener('change', () => applyQuality());
 elements.transport.addEventListener('change', reconnect);
 elements.retry.addEventListener('click', reconnect);
+elements.agentForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const token = elements.agentToken.value.trim();
+  storageSet(TOKEN_KEY, token);
+  if (token) agent.connect(token);
+  else agent.disconnect();
+});
+elements.autoApprove.addEventListener('change', () => {
+  storageSet(AUTO_APPROVE_KEY, elements.autoApprove.checked ? '1' : '');
+  if (elements.autoApprove.checked && controlState === 'requested') grantControl();
+});
+elements.controlAllow.addEventListener('click', grantControl);
+elements.controlDeny.addEventListener('click', () => denyControl());
+elements.controlRevoke.addEventListener('click', () => revokeControl());
+
+elements.autoApprove.checked = storageGet(AUTO_APPROVE_KEY) === '1';
+const savedToken = storageGet(TOKEN_KEY);
+if (savedToken) {
+  elements.agentToken.value = savedToken;
+  agent.connect(savedToken);
+}

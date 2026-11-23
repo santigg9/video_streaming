@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check public/common.js && node --check public/host.js && node --check public/viewer.js"
+    "check": "node --check server.js && node --check public/common.js && node --check public/host.js && node --check public/viewer.js && node --check public/control-protocol.js && node --check public/agent-link.js && node --check public/remote-input.js && node --check agent/agent.js && node --check agent/keymap.js"
   },
   "engines": {
     "node": ">=20"

@@ -48,12 +48,16 @@ export class Signaling {
   }
 }
 
+export const INPUT_CHANNEL = 'input';
+export const INPUT_FAST_CHANNEL = 'input-fast';
+
 export class PeerConnection {
-  constructor(role, signaling, { onTrack, onState }) {
+  constructor(role, signaling, { onTrack, onState, onDataChannel }) {
     this.role = role;
     this.signaling = signaling;
     this.onTrack = onTrack;
     this.onState = onState;
+    this.onDataChannel = onDataChannel;
     this.polite = role === 'viewer';
     this.transport = 'auto';
     this.pendingCandidates = [];
@@ -109,6 +113,16 @@ export class PeerConnection {
         this.signaling.send({ type: 'candidate', candidate });
       }
     });
+
+    // El host crea los canales de control remoto; el viewer los recibe.
+    // "input" es confiable y ordenado (clics, teclas, permisos); "input-fast"
+    // no reintenta y sirve para el movimiento del mouse, donde solo importa el último.
+    if (this.role === 'host') {
+      this.onDataChannel?.(peer.createDataChannel(INPUT_CHANNEL, { ordered: true }));
+      this.onDataChannel?.(peer.createDataChannel(INPUT_FAST_CHANNEL, { ordered: false, maxRetransmits: 0 }));
+    } else {
+      peer.addEventListener('datachannel', ({ channel }) => this.onDataChannel?.(channel));
+    }
 
     peer.addEventListener('track', (event) => {
       if (event.track.kind === 'video') this.onTrack(event.streams[0]);

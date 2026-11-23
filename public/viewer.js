@@ -1,4 +1,5 @@
 import { Signaling, PeerConnection, ConnectionMonitor } from './common.js';
+import { RemoteInput } from './remote-input.js';
 
 const room = location.pathname.split('/').filter(Boolean).pop();
 const video = document.querySelector('#remote-video');
@@ -10,6 +11,10 @@ const status = document.querySelector('#viewer-status');
 const dot = document.querySelector('#viewer-dot');
 const fullscreen = document.querySelector('#fullscreen-button');
 const routeSummary = document.querySelector('#viewer-route-summary');
+const controlButton = document.querySelector('#control-button');
+const controlLabel = controlButton.querySelector('span');
+const note = document.querySelector('#viewer-note');
+const defaultNote = note.textContent;
 
 let signaling;
 let peer;
@@ -83,11 +88,31 @@ video.addEventListener('playing', () => {
   setStatus('Transmisión en vivo', 'connected');
 });
 
+const remoteInput = new RemoteInput({
+  frame,
+  video,
+  onChange(state, notice) {
+    const labels = {
+      unavailable: 'Pedir control',
+      idle: 'Pedir control',
+      requesting: 'Esperando permiso…',
+      active: 'Soltar control',
+    };
+    controlLabel.textContent = labels[state];
+    controlButton.disabled = state === 'unavailable';
+    controlButton.classList.toggle('active', state === 'active');
+    note.textContent = notice
+      || (state === 'active' ? 'Controlás el Mac. Hacé clic fuera del video para dejar de enviar el teclado.' : defaultNote);
+    note.classList.toggle('notice', Boolean(notice));
+  },
+});
+
 peer = new PeerConnection('viewer', null, {
   onTrack(remoteStream) {
     video.srcObject = remoteStream;
   },
   onState: handlePeerState,
+  onDataChannel: (channel) => remoteInput.attach(channel),
 });
 monitor = new ConnectionMonitor(() => peer?.peer, 'viewer', renderMetrics);
 monitor.start();
@@ -118,6 +143,7 @@ signaling = new Signaling(room, 'viewer', {
     } else if (incoming.type === 'peer-left' && incoming.role === 'host') {
       if (!hostPresent) return;
       hostPresent = false;
+      remoteInput.detach();
       peer.close();
       video.srcObject = null;
       renderMetrics(null);
@@ -125,6 +151,7 @@ signaling = new Signaling(room, 'viewer', {
       showMessage('La transmisión se detuvo', 'Si el Mac vuelve a compartir el mismo enlace, la pantalla aparecerá acá.');
     } else if (incoming.type === 'stream-stopped') {
       hostPresent = false;
+      remoteInput.detach();
       renderMetrics(null);
       peer.close();
       video.srcObject = null;
@@ -137,6 +164,19 @@ signaling = new Signaling(room, 'viewer', {
 });
 peer.signaling = signaling;
 signaling.connect();
+
+controlButton.addEventListener('click', () => remoteInput.toggle());
+
+// En pantalla completa, Keyboard Lock (Chrome/Edge) deja pasar al Mac atajos
+// que el navegador normalmente se queda, como Esc o Cmd+Tab.
+document.addEventListener('fullscreenchange', async () => {
+  try {
+    if (document.fullscreenElement && remoteInput.active) await navigator.keyboard?.lock?.();
+    else navigator.keyboard?.unlock?.();
+  } catch {
+    // Sin Keyboard Lock: algunos atajos los sigue manejando el navegador.
+  }
+});
 
 fullscreen.addEventListener('click', async () => {
   try {
