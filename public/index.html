@@ -15,7 +15,10 @@
       <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 25c7-15 23-15 30 0"/><circle cx="5" cy="25" r="3"/><circle cx="35" cy="25" r="3"/></svg>
       Puente
     </a>
-    <span class="privacy-note">Solo video. Nada se graba.</span>
+    <div class="header-links">
+      <span class="privacy-note">Nada se graba.</span>
+      <a class="header-link" href="/logout">Cerrar sesión</a>
+    </div>
   </header>
 
   <main id="welcome" class="host-layout">
@@ -26,19 +29,19 @@
         <span class="route-end">China</span>
       </div>
       <h1>Tu pantalla,<br>del otro lado.</h1>
-      <p>Compartí una ventana o toda la pantalla de tu Mac. La otra persona solo necesita abrir un enlace.</p>
+      <p>Compartí una ventana o toda la pantalla de tu computadora. Desde la otra solo hace falta abrir un enlace e iniciar sesión.</p>
     </section>
 
     <section class="host-action" aria-labelledby="start-title">
       <div class="action-content">
-        <h2 id="start-title">Empecemos por el Mac</h2>
+        <h2 id="start-title">Empecemos por esta computadora</h2>
         <p>Al continuar, tu navegador te va a preguntar qué pantalla o ventana querés mostrar.</p>
         <button id="start-button" class="primary-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           Elegir pantalla y compartir
         </button>
         <p id="start-error" class="error-message" role="alert" hidden></p>
-        <div class="browser-note">Usá Chrome o Edge en tu Mac. No se comparten el micrófono ni el sonido.</div>
+        <div class="browser-note">Usá Chrome o Edge. No se comparten el micrófono ni el sonido.</div>
       </div>
     </section>
   </main>
@@ -61,7 +64,7 @@
     <aside class="share-panel">
       <div>
         <h1>Ya estás compartiendo.</h1>
-        <p>Enviá este enlace a la persona en China. Se abre en su navegador.</p>
+        <p>Abrí este enlace en la otra computadora. Te va a pedir tu usuario y contraseña.</p>
       </div>
       <div class="link-field">
         <label for="share-link">Enlace privado</label>
@@ -98,7 +101,7 @@
       <section class="remote-control" aria-labelledby="remote-control-title">
         <h2 id="remote-control-title">Control remoto</h2>
         <div class="setting-field">
-          <label for="agent-token">Token del agente de este Mac</label>
+          <label for="agent-token">Token del agente de esta computadora</label>
           <form id="agent-form" class="copy-row">
             <input id="agent-token" type="password" autocomplete="off" spellcheck="false" placeholder="Pegá el token que muestra el agente">
             <button id="agent-connect" class="copy-button" type="submit">Conectar</button>
@@ -107,17 +110,17 @@
         </div>
         <label class="check-field">
           <input id="auto-approve" type="checkbox">
-          <span>Aceptar pedidos de control sin preguntar<small>Útil si nadie va a estar frente al Mac.</small></span>
+          <span>Aceptar pedidos de control sin preguntar<small>Útil si nadie va a estar frente a la computadora.</small></span>
         </label>
         <div id="control-request" class="control-box" role="alert" hidden>
-          <p><strong>El otro equipo pide controlar tu Mac.</strong> Va a poder mover el mouse y escribir.</p>
+          <p><strong>El otro equipo pide controlar tu computadora.</strong> Va a poder mover el mouse y escribir.</p>
           <div class="control-actions">
             <button id="control-allow" class="small-button primary" type="button">Permitir</button>
             <button id="control-deny" class="small-button" type="button">Rechazar</button>
           </div>
         </div>
         <div id="control-active" class="control-box active" hidden>
-          <p><strong>El otro equipo está controlando tu Mac.</strong></p>
+          <p><strong>El otro equipo está controlando tu computadora.</strong></p>
           <div class="control-actions">
             <button id="control-revoke" class="small-button" type="button">Quitar control</button>
           </div>
@@ -142,7 +145,7 @@
 
       <div class="sharing-facts">
         <p><strong>Una persona</strong> puede ver esta transmisión.</p>
-        <p>Cualquiera que tenga el enlace puede entrar. Compartilo solo con quien corresponda, sobre todo si conectás el agente de control.</p>
+        <p>Solo entra quien inicie sesión con tu usuario. No compartas la contraseña, sobre todo si conectás el agente de control.</p>
       </div>
       <button id="stop-button" class="secondary-button" type="button">Dejar de compartir</button>
     </aside>

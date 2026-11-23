@@ -2,7 +2,7 @@
   "name": "puente-agent",
   "version": "1.0.0",
   "private": true,
-  "description": "Agente local de Puente: aplica en macOS el mouse y el teclado que envía el equipo remoto.",
+  "description": "Agente local de Puente: aplica en macOS o Windows el mouse y el teclado que envía el equipo remoto.",
   "type": "module",
   "scripts": {
     "start": "node agent.js",

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef3f8">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Puente — Iniciar sesión</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="login-body">
+  <main class="login-card">
+    <span class="brand" aria-label="Puente">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 25c7-15 23-15 30 0"/><circle cx="5" cy="25" r="3"/><circle cx="35" cy="25" r="3"/></svg>
+      Puente
+    </span>
+    <h1>Iniciá sesión</h1>
+    <p>Este acceso es privado.</p>
+    {{error}}
+    <form method="post" action="/login" class="login-form">
+      <input type="hidden" name="next" value="{{next}}">
+      <label for="username">Usuario</label>
+      <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+      <label for="password">Contraseña</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button class="primary-button" type="submit">Entrar</button>
+    </form>
+  </main>
+</body>
+</html>

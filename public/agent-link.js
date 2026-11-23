@@ -1,6 +1,6 @@
 import { AGENT_URL } from './control-protocol.js';
 
-// Conexión entre la página del host y el agente local que corre en el Mac.
+// Conexión entre la página del host y el agente local que corre en la computadora que comparte.
 // Reintenta sola mientras haya un token cargado, por si el agente se reinicia.
 export class AgentLink {
   constructor({ onStatus }) {

@@ -169,7 +169,7 @@ function handlePeerState(state) {
 function renderAgentStatus(status, info) {
   const texts = {
     idle: 'Sin agente: solo se comparte video.',
-    connecting: 'Buscando el agente en este Mac…',
+    connecting: 'Buscando el agente en esta computadora…',
     unreachable: 'No encontramos el agente. Inicialo con "npm start" en la carpeta agent; reintentamos solos.',
     lost: 'Se perdió la conexión con el agente; reintentando…',
     unauthorized: 'El agente rechazó el token. Copialo de nuevo desde la terminal.',
@@ -179,7 +179,7 @@ function renderAgentStatus(status, info) {
   if (status === 'ready') {
     const size = info?.screen?.width ? ` · pantalla ${info.screen.width}×${info.screen.height}` : '';
     text = info?.accessibility === 'denied'
-      ? 'Agente conectado, pero le falta el permiso de Accesibilidad de macOS: el mouse y el teclado no van a funcionar.'
+      ? 'Agente conectado, pero en macOS le falta el permiso de Accesibilidad: el mouse y el teclado no van a funcionar.'
       : `Agente conectado${size}. El otro equipo puede pedir control.`;
   }
   elements.agentStatus.textContent = text;

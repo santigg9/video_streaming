@@ -1,8 +1,9 @@
-# Agente de control para macOS
+# Agente de control (macOS y Windows)
 
-Programa chico que corre en el Mac que comparte pantalla. Recibe desde la página
-del host (Chrome, en ese mismo Mac) los eventos de mouse y teclado del equipo
-remoto y los aplica en macOS. No se despliega en el VPS.
+Programa chico que corre en la computadora que comparte pantalla. Recibe desde
+la página del host (Chrome o Edge, en esa misma computadora) los eventos de
+mouse y teclado del equipo remoto y los aplica en el sistema. No se despliega en
+el VPS.
 
 ## Instalación (una sola vez)
 
@@ -11,8 +12,7 @@ cd agent
 npm install
 ```
 
-Requiere Node 20 o más nuevo. No hace falta firmar nada: el permiso de
-Accesibilidad se le da a la terminal desde la que lo corrés.
+Requiere Node 20 o más nuevo. No hace falta firmar nada.
 
 ## Uso
 
@@ -21,15 +21,17 @@ cd agent
 npm start
 ```
 
-1. La primera vez, macOS pide el permiso de **Accesibilidad**. Activá tu terminal
-   (Terminal, iTerm…) en *Ajustes del Sistema → Privacidad y seguridad →
-   Accesibilidad* y volvé a iniciar el agente.
+1. **Solo en macOS:** la primera vez, el sistema pide el permiso de
+   **Accesibilidad**. Activá tu terminal (Terminal, iTerm…) en *Ajustes del
+   Sistema → Privacidad y seguridad → Accesibilidad* y volvé a iniciar el
+   agente. En Windows no hace falta ningún permiso.
 2. El agente muestra un **token**. Pegalo en la sección «Control remoto» de la
    página del host y tocá **Conectar**. Queda guardado en el navegador y en
-   `~/.puente-agent/token`, así que no cambia entre reinicios.
+   `~/.puente-agent/token` (en Windows, `%USERPROFILE%\.puente-agent\token`), así
+   que no cambia entre reinicios.
 3. Compartí **la pantalla completa** (no una ventana). Desde el viewer, tocá
-   **Pedir control** y aceptalo en el Mac, o activá «Aceptar pedidos de control
-   sin preguntar» si nadie va a estar frente al Mac.
+   **Pedir control** y aceptalo en la computadora que comparte, o activá «Aceptar
+   pedidos de control sin preguntar» si nadie va a estar frente a ella.
 
 Chrome puede preguntar si la página puede acceder a «otros dispositivos o apps
 de la red local»: aceptalo, es la conexión al agente en `127.0.0.1`.
@@ -42,7 +44,7 @@ botones que hayan quedado apretados.
 
 - Escucha solo en `127.0.0.1`: no es accesible desde la red.
 - Solo acepta conexiones desde los orígenes de `PUENTE_ORIGINS` y con el token.
-- Para invalidar el token, borrá `~/.puente-agent/token` y reiniciá el agente.
+- Para invalidar el token, borrá el archivo del token y reiniciá el agente.
 
 ## Variables de entorno
 
@@ -58,6 +60,10 @@ botones que hayan quedado apretados.
 
 - Controla la **pantalla principal**. Si compartís otro monitor, las coordenadas
   no coinciden.
-- El teclado se envía por tecla física: los atajos usan Cmd en el Mac. Si el
-  viewer está en Windows, su tecla Windows es Cmd y Ctrl sigue siendo Ctrl.
-- La escritura con IME (chino) y los atajos Ctrl↔Cmd llegan en la fase 2.
+- El teclado se envía por tecla física. Cmd (Mac) y la tecla Windows son la
+  misma tecla: si el viewer está en un Mac y el host en Windows, para copiar hay
+  que usar Ctrl+C, no Cmd+C (y al revés).
+- **Windows:** no se pueden controlar las ventanas abiertas como administrador
+  (salvo que el agente también corra como administrador), ni el aviso de UAC, la
+  pantalla de bloqueo o Ctrl+Alt+Supr.
+- La escritura con IME (chino) y el mapeo Ctrl↔Cmd llegan en la fase 2.

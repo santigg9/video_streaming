@@ -2,13 +2,13 @@ import { INPUT_CHANNEL, INPUT_FAST_CHANNEL } from './common.js';
 import { parseMessage } from './control-protocol.js';
 
 const denyReasons = {
-  agent: 'El Mac no tiene el agente de control conectado.',
-  surface: 'Para controlar, el Mac tiene que compartir la pantalla completa, no una ventana.',
-  denied: 'El Mac rechazó el pedido de control.',
+  agent: 'La otra computadora no tiene el agente de control conectado.',
+  surface: 'Para controlar, la otra computadora tiene que compartir la pantalla completa, no una ventana.',
+  denied: 'La otra computadora rechazó el pedido de control.',
 };
 
 const revokeReasons = {
-  agent: 'Se perdió el agente de control del Mac.',
+  agent: 'Se perdió el agente de control de la otra computadora.',
 };
 
 // Captura el mouse y el teclado sobre el video y los manda al host.
@@ -69,7 +69,7 @@ export class RemoteInput {
       this.setState('idle', denyReasons[message.reason] || denyReasons.denied);
     } else if (message.t === 'revoke') {
       this.clearLocalInput();
-      this.setState('idle', revokeReasons[message.reason] || 'El Mac quitó el control remoto.');
+      this.setState('idle', revokeReasons[message.reason] || 'La otra computadora quitó el control remoto.');
     }
   }
 
@@ -231,7 +231,7 @@ export class RemoteInput {
       this.send({ t: 'ku', c: event.code });
     });
 
-    // Si el video pierde el foco, nada debe quedar apretado en el Mac.
+    // Si el video pierde el foco, nada debe quedar apretado en la otra computadora.
     frame.addEventListener('blur', () => this.releaseAll());
     window.addEventListener('blur', () => this.releaseAll());
     document.addEventListener('visibilitychange', () => {

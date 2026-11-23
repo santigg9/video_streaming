@@ -1,9 +1,9 @@
-// Agente local de Puente para macOS.
+// Agente local de Puente para macOS y Windows.
 //
-// Escucha SOLO en 127.0.0.1. La página del host (Chrome en este mismo Mac) se
+// Escucha SOLO en 127.0.0.1. La página del host (Chrome en esta misma computadora) se
 // conecta acá, se autentica con un token y reenvía los eventos de mouse y
 // teclado que llegan del equipo remoto por WebRTC. El agente los aplica con
-// nut-js, que necesita el permiso de Accesibilidad de macOS.
+// nut-js. En macOS necesita el permiso de Accesibilidad.
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';

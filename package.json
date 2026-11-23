@@ -2,12 +2,12 @@
   "name": "puente-video",
   "version": "1.0.0",
   "private": true,
-  "description": "Comparte la pantalla de un Mac, sin audio, mediante WebRTC.",
+  "description": "Comparte la pantalla de una computadora y permite controlarla de forma remota mediante WebRTC.",
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check public/common.js && node --check public/host.js && node --check public/viewer.js && node --check public/control-protocol.js && node --check public/agent-link.js && node --check public/remote-input.js && node --check agent/agent.js && node --check agent/keymap.js"
+    "check": "node --check server.js && node --check auth.js && node --check public/common.js && node --check public/host.js && node --check public/viewer.js && node --check public/control-protocol.js && node --check public/agent-link.js && node --check public/remote-input.js && node --check agent/agent.js && node --check agent/keymap.js"
   },
   "engines": {
     "node": ">=20"

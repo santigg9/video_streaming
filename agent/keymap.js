@@ -1,6 +1,6 @@
 // Traduce KeyboardEvent.code (la tecla física en el navegador remoto) al nombre
 // de tecla de nut-js. Se usa la posición física, no el carácter, para que la
-// distribución de teclado la decida el Mac.
+// distribución de teclado la decida la computadora que comparte.
 
 const names = {
   Escape: 'Escape',

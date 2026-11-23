@@ -66,8 +66,8 @@ function handlePeerState(state) {
   } else if (state === 'failed') {
     setStatus('Problemas de conexión', 'error');
     const text = peer.transport === 'relay'
-      ? 'No hay una ruta TURN disponible. Revisá la configuración del servidor o elegí otro modo en el Mac.'
-      : 'Estamos reintentando. También podés probar otro protocolo desde el Mac.';
+      ? 'No hay una ruta TURN disponible. Revisá la configuración del servidor o elegí otro modo en la computadora que comparte.'
+      : 'Estamos reintentando. También podés probar otro protocolo desde la computadora que comparte.';
     showMessage('No pudimos establecer la conexión', text);
   } else if (state === 'disconnected' && hostPresent) {
     setStatus('Reconectando', 'error');
@@ -102,7 +102,7 @@ const remoteInput = new RemoteInput({
     controlButton.disabled = state === 'unavailable';
     controlButton.classList.toggle('active', state === 'active');
     note.textContent = notice
-      || (state === 'active' ? 'Controlás el Mac. Hacé clic fuera del video para dejar de enviar el teclado.' : defaultNote);
+      || (state === 'active' ? 'Estás controlando la otra computadora. Hacé clic fuera del video para dejar de enviar el teclado.' : defaultNote);
     note.classList.toggle('notice', Boolean(notice));
   },
 });
@@ -129,17 +129,17 @@ signaling = new Signaling(room, 'viewer', {
       hostPresent = incoming.peerPresent;
       await preparePeer();
       if (!hostPresent) {
-        showMessage('El Mac todavía no está conectado', 'Dejá esta página abierta. La transmisión comenzará cuando quien comparte esté listo.');
+        showMessage('La otra computadora todavía no está conectada', 'Dejá esta página abierta. La transmisión comenzará cuando quien comparte esté listo.');
       }
     } else if (incoming.type === 'connection-settings') {
       peer.setTransport(incoming.transport);
       renderMetrics(null);
       await preparePeer();
-      setStatus('Conectando con el Mac');
+      setStatus('Conectando con la otra computadora');
     } else if (incoming.type === 'peer-joined' && incoming.role === 'host') {
       hostPresent = true;
       await preparePeer();
-      setStatus('Conectando con el Mac');
+      setStatus('Conectando con la otra computadora');
     } else if (incoming.type === 'peer-left' && incoming.role === 'host') {
       if (!hostPresent) return;
       hostPresent = false;
@@ -147,8 +147,8 @@ signaling = new Signaling(room, 'viewer', {
       peer.close();
       video.srcObject = null;
       renderMetrics(null);
-      setStatus('Esperando al Mac');
-      showMessage('La transmisión se detuvo', 'Si el Mac vuelve a compartir el mismo enlace, la pantalla aparecerá acá.');
+      setStatus('Esperando a la otra computadora');
+      showMessage('La transmisión se detuvo', 'Si la otra computadora vuelve a compartir el mismo enlace, la pantalla aparecerá acá.');
     } else if (incoming.type === 'stream-stopped') {
       hostPresent = false;
       remoteInput.detach();
@@ -167,7 +167,7 @@ signaling.connect();
 
 controlButton.addEventListener('click', () => remoteInput.toggle());
 
-// En pantalla completa, Keyboard Lock (Chrome/Edge) deja pasar al Mac atajos
+// En pantalla completa, Keyboard Lock (Chrome/Edge) deja pasar a la otra computadora atajos
 // que el navegador normalmente se queda, como Esc o Cmd+Tab.
 document.addEventListener('fullscreenchange', async () => {
   try {
