@@ -1,0 +1,18 @@
+{
+  "name": "puente-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Comparte la pantalla de un Mac, sin audio, mediante WebRTC.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check public/common.js && node --check public/host.js && node --check public/viewer.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

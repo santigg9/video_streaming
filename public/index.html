@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef3f8">
+  <title>Puente — Compartí tu pantalla</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/host.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Puente, inicio">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 25c7-15 23-15 30 0"/><circle cx="5" cy="25" r="3"/><circle cx="35" cy="25" r="3"/></svg>
+      Puente
+    </a>
+    <span class="privacy-note">Solo video. Nada se graba.</span>
+  </header>
+
+  <main id="welcome" class="host-layout">
+    <section class="host-intro">
+      <div class="route" aria-hidden="true">
+        <svg viewBox="0 0 600 190" preserveAspectRatio="none"><path d="M20 158C140 12 448 12 580 158"/></svg>
+        <span class="route-start">Argentina</span>
+        <span class="route-end">China</span>
+      </div>
+      <h1>Tu pantalla,<br>del otro lado.</h1>
+      <p>Compartí una ventana o toda la pantalla de tu Mac. La otra persona solo necesita abrir un enlace.</p>
+    </section>
+
+    <section class="host-action" aria-labelledby="start-title">
+      <div class="action-content">
+        <h2 id="start-title">Empecemos por el Mac</h2>
+        <p>Al continuar, tu navegador te va a preguntar qué pantalla o ventana querés mostrar.</p>
+        <button id="start-button" class="primary-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          Elegir pantalla y compartir
+        </button>
+        <p id="start-error" class="error-message" role="alert" hidden></p>
+        <div class="browser-note">Usá Chrome o Edge en tu Mac. No se comparten el micrófono ni el sonido.</div>
+      </div>
+    </section>
+  </main>
+
+  <main id="sharing" class="sharing-layout" hidden>
+    <section class="preview-section" aria-label="Vista previa de tu pantalla">
+      <div class="sharing-heading">
+        <div>
+          <span id="connection-dot" class="status-dot waiting"></span>
+          <span id="connection-status">Preparando la conexión</span>
+        </div>
+        <span class="live-label">Vista previa local</span>
+      </div>
+      <div class="video-frame host-preview">
+        <video id="local-video" autoplay muted playsinline></video>
+        <div class="preview-hint">Esto es lo que estás compartiendo</div>
+      </div>
+    </section>
+
+    <aside class="share-panel">
+      <div>
+        <h1>Ya estás compartiendo.</h1>
+        <p>Enviá este enlace a la persona en China. Se abre en su navegador.</p>
+      </div>
+      <div class="link-field">
+        <label for="share-link">Enlace privado</label>
+        <div class="copy-row">
+          <input id="share-link" readonly>
+          <button id="copy-button" class="copy-button" type="button">Copiar</button>
+        </div>
+        <span id="copy-feedback" class="copy-feedback" role="status"></span>
+      </div>
+      <div class="stream-settings">
+        <div class="setting-field">
+          <label for="quality">Calidad máxima</label>
+          <select id="quality">
+            <option value="high">Alta · 1080p, 30 FPS · 4 Mbps</option>
+            <option value="medium">Media · 720p, 30 FPS · 2,5 Mbps</option>
+            <option value="low">Baja · 540p, 24 FPS · 1,2 Mbps</option>
+            <option value="minimum">Mínima · 360p, 15 FPS · 600 Kbps</option>
+          </select>
+          <span id="quality-feedback" class="setting-help" role="status">La conexión puede reducirla automáticamente si hace falta.</span>
+        </div>
+        <div class="setting-field">
+          <label for="transport">Probar conexión por</label>
+          <select id="transport">
+            <option value="auto">Automática</option>
+            <option value="udp">Solo UDP</option>
+            <option value="tcp">Solo TCP</option>
+            <option value="relay">Solo TURN</option>
+          </select>
+          <span class="setting-help">Al cambiar de modo se reconecta el video. TURN necesita un servidor configurado.</span>
+          <button id="retry-button" class="text-button" type="button">Probar esta conexión de nuevo</button>
+        </div>
+      </div>
+
+      <details class="connection-details" id="host-details">
+        <summary>Información de la conexión <span id="host-route-summary">Sin datos</span></summary>
+        <dl class="metrics-grid">
+          <div><dt>Estado</dt><dd data-metric="state">–</dd></div>
+          <div><dt>Ruta</dt><dd data-metric="route">–</dd></div>
+          <div><dt>Protocolo</dt><dd data-metric="protocol">–</dd></div>
+          <div><dt>Resolución enviada</dt><dd data-metric="resolution">–</dd></div>
+          <div><dt>Fotogramas</dt><dd data-metric="fps">–</dd></div>
+          <div><dt>Bitrate</dt><dd data-metric="bitrate">–</dd></div>
+          <div><dt>Latencia</dt><dd data-metric="latency">–</dd></div>
+          <div><dt>Pérdida</dt><dd data-metric="loss">–</dd></div>
+          <div><dt>Variación</dt><dd data-metric="jitter">–</dd></div>
+          <div><dt>Calidad limitada por</dt><dd data-metric="limitation">–</dd></div>
+        </dl>
+      </details>
+
+      <div class="sharing-facts">
+        <p><strong>Una persona</strong> puede ver esta transmisión.</p>
+        <p>Cualquiera que tenga el enlace puede entrar. Compartilo solo con quien corresponda.</p>
+      </div>
+      <button id="stop-button" class="secondary-button" type="button">Dejar de compartir</button>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
