@@ -8,6 +8,7 @@
 //   { t: 'w', dx, dy }                   rueda, en píxeles
 //   { t: 'kd' | 'ku', c, k? }            tecla abajo/arriba (KeyboardEvent.code)
 //   { t: 'reset' }                       suelta todas las teclas (incluidos los modificadores) y botones
+//   { t: 'mic', on }                     avisa si el micrófono del viewer está activo
 //
 // k es el estado de los modificadores en el navegador del viewer en ese momento,
 // como máscara de bits: 1 Ctrl, 2 Shift, 4 Alt, 8 Meta (Cmd/Windows). El agente lo

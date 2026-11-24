@@ -52,12 +52,14 @@ export const INPUT_CHANNEL = 'input';
 export const INPUT_FAST_CHANNEL = 'input-fast';
 
 export class PeerConnection {
-  constructor(role, signaling, { onTrack, onState, onDataChannel }) {
+  constructor(role, signaling, { onTrack, onState, onDataChannel, onAudioTrack }) {
     this.role = role;
     this.signaling = signaling;
     this.onTrack = onTrack;
     this.onState = onState;
     this.onDataChannel = onDataChannel;
+    this.onAudioTrack = onAudioTrack;
+    this.outgoingAudio = null;
     this.polite = role === 'viewer';
     this.transport = 'auto';
     this.pendingCandidates = [];
@@ -126,6 +128,7 @@ export class PeerConnection {
 
     peer.addEventListener('track', (event) => {
       if (event.track.kind === 'video') this.onTrack(event.streams[0]);
+      else if (event.track.kind === 'audio') this.onAudioTrack?.(event.track, event.streams[0]);
     });
 
     peer.addEventListener('connectionstatechange', () => {
@@ -141,6 +144,25 @@ export class PeerConnection {
       track.contentHint = 'detail';
       peer.addTrack(track, stream);
     }
+    // Un solo canal de audio en ambos sentidos: el host manda el sonido de la
+    // computadora y recibe la voz del viewer. Va en el mismo stream que el video
+    // para que se reproduzcan sincronizados. Siempre existe, así cambiar o
+    // apagar el audio es un replaceTrack y no hace falta renegociar.
+    const transceiver = peer.addTransceiver('audio', { direction: 'sendrecv', streams: [stream] });
+    if (this.outgoingAudio) transceiver.sender.replaceTrack(this.outgoingAudio);
+  }
+
+  audioTransceiver(peer = this.peer) {
+    return peer?.getTransceivers().find((item) => item.receiver.track.kind === 'audio' && !item.stopped);
+  }
+
+  // Pista de audio a enviar (sonido del sistema en el host, micrófono en el
+  // viewer), o null para dejar de enviar. Se recuerda y se vuelve a aplicar si
+  // la conexión se recrea.
+  async setOutgoingAudio(track) {
+    this.outgoingAudio = track;
+    const transceiver = this.audioTransceiver();
+    if (transceiver) await transceiver.sender.replaceTrack(track);
   }
 
   async receive(message) {
@@ -171,6 +193,14 @@ export class PeerConnection {
       }
 
       if (description.type === 'offer') {
+        // El viewer acepta enviar audio por el mismo canal (su micrófono).
+        const audio = this.role === 'viewer' ? this.audioTransceiver() : null;
+        if (audio) {
+          if (audio.direction !== 'sendrecv') audio.direction = 'sendrecv';
+          if (this.outgoingAudio && audio.sender.track !== this.outgoingAudio) {
+            await audio.sender.replaceTrack(this.outgoingAudio);
+          }
+        }
         await this.peer.setLocalDescription();
         this.signaling.send({ type: 'description', description: this.peer.localDescription });
       }

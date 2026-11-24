@@ -14,6 +14,11 @@ const routeSummary = document.querySelector('#viewer-route-summary');
 const controlButton = document.querySelector('#control-button');
 const controlLabel = controlButton.querySelector('span');
 const releaseButton = document.querySelector('#release-button');
+const soundButton = document.querySelector('#sound-button');
+const soundLabel = soundButton.querySelector('span');
+const micButton = document.querySelector('#mic-button');
+const micLabel = micButton.querySelector('span');
+let micTrack = null;
 const note = document.querySelector('#viewer-note');
 const defaultNote = note.textContent;
 
@@ -86,12 +91,15 @@ async function preparePeer() {
 video.addEventListener('playing', () => {
   message.hidden = true;
   fullscreen.disabled = false;
+  soundButton.disabled = false;
+  micButton.disabled = false;
   setStatus('Transmisión en vivo', 'connected');
 });
 
 const remoteInput = new RemoteInput({
   frame,
   video,
+  onChannelOpen: () => remoteInput.send({ t: 'mic', on: Boolean(micTrack) }),
   onChange(state, notice) {
     const labels = {
       unavailable: 'Pedir control',
@@ -168,6 +176,56 @@ peer.signaling = signaling;
 signaling.connect();
 
 controlButton.addEventListener('click', () => remoteInput.toggle());
+
+// ---------- Audio ----------
+
+function renderAudioButtons() {
+  soundLabel.textContent = video.muted ? 'Activar sonido' : 'Silenciar';
+  soundButton.classList.toggle('active', !video.muted);
+  micLabel.textContent = micTrack ? 'Apagar micrófono' : 'Activar micrófono';
+  micButton.classList.toggle('live', Boolean(micTrack));
+}
+
+// Los navegadores solo reproducen audio después de un clic: por eso el video
+// arranca silenciado y este botón lo activa.
+soundButton.addEventListener('click', () => {
+  video.muted = !video.muted;
+  video.play().catch(() => {});
+  renderAudioButtons();
+});
+
+async function stopMicrophone() {
+  micTrack?.stop();
+  micTrack = null;
+  await peer.setOutgoingAudio(null).catch(() => {});
+  remoteInput.send({ t: 'mic', on: false });
+  renderAudioButtons();
+}
+
+micButton.addEventListener('click', async () => {
+  if (micTrack) {
+    await stopMicrophone();
+    return;
+  }
+  micButton.disabled = true;
+  try {
+    // Voz: con cancelación de eco, para que lo que suena en tus parlantes no
+    // vuelva a la reunión. Con auriculares funciona todavía mejor.
+    const media = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    micTrack = media.getAudioTracks()[0];
+    micTrack.addEventListener('ended', () => stopMicrophone());
+    await peer.setOutgoingAudio(micTrack);
+    remoteInput.send({ t: 'mic', on: true });
+    note.textContent = 'Micrófono activo: la otra computadora puede escucharte si eligió dónde reproducir tu voz.';
+  } catch {
+    note.textContent = 'No se pudo usar el micrófono. Revisá el permiso del navegador.';
+  } finally {
+    micButton.disabled = false;
+    renderAudioButtons();
+  }
+});
 releaseButton.addEventListener('click', () => {
   remoteInput.releaseAll();
   note.textContent = 'Se soltaron todas las teclas y botones en la otra computadora.';

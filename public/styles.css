@@ -309,8 +309,12 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.remote-control { border-top: 1px solid #e4e9f0; padding-top: 24px; }
-.remote-control h2 { margin: 0 0 16px; font-size: 15px; letter-spacing: -.01em; }
+.remote-control, .panel-section { border-top: 1px solid #e4e9f0; padding-top: 24px; }
+.remote-control h2, .panel-section h2 { margin: 0 0 16px; font-size: 15px; letter-spacing: -.01em; }
+.panel-section > .setting-help { margin: 0 0 16px; }
+.audio-status { margin-top: 18px !important; padding: 10px 12px; border-radius: 8px; background: #f3f6fa; font-size: 12px !important; line-height: 1.5; }
+.audio-status.live { background: #ecfdf3; color: #067647 !important; }
+.audio-status.error { background: #fef3f2; color: #b42318 !important; }
 .remote-control .copy-row input { font-family: ui-monospace, Menlo, monospace; }
 #agent-status[data-state="ready"] { color: #067647; }
 #agent-status[data-state="unauthorized"], #agent-status[data-state="lost"] { color: #b42318; }
@@ -421,7 +425,8 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 }
 .viewer-button:hover:not(:disabled) { color: white; }
 .viewer-button.active { color: #f2c14e; }
-.viewer-actions { display: flex; align-items: center; gap: 6px; }
+.viewer-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.viewer-button.live { color: #f97066; }
 .viewer-toolbar p.notice { color: #f2c14e; }
 .viewer-frame:focus { outline: none; }
 .viewer-frame.controlling { border-color: #f2c14e; box-shadow: 0 0 0 1px #f2c14e; cursor: default; }

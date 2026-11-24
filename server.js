@@ -71,7 +71,7 @@ const privateFiles = new Set([
 ]);
 const baseHeaders = {
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-  'Permissions-Policy': 'camera=(), microphone=(), display-capture=(self)',
+  'Permissions-Policy': 'camera=(), microphone=(self), display-capture=(self)',
   'Referrer-Policy': 'no-referrer',
   'X-Content-Type-Options': 'nosniff',
 };

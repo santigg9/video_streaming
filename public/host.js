@@ -36,6 +36,11 @@ const elements = {
   controlDeny: document.querySelector('#control-deny'),
   controlRevoke: document.querySelector('#control-revoke'),
   controlRelease: document.querySelector('#control-release'),
+  audioPermission: document.querySelector('#audio-permission'),
+  audioEnable: document.querySelector('#audio-enable'),
+  audioSource: document.querySelector('#audio-source'),
+  audioSink: document.querySelector('#audio-sink'),
+  audioStatus: document.querySelector('#audio-status'),
 };
 
 let stream;
@@ -49,6 +54,13 @@ let inputChannel = null;
 let controlState = 'none'; // none | requested | granted
 const agent = new AgentLink({ onStatus: renderAgentStatus });
 const TOKEN_KEY = 'puente-agent-token';
+const AUDIO_SOURCE_KEY = 'puente-audio-source';
+const AUDIO_SINK_KEY = 'puente-audio-sink';
+let systemAudioTrack = null;
+let remoteMicOn = false;
+let audioError = '';
+const remoteVoice = new Audio();
+remoteVoice.autoplay = true;
 const AUTO_APPROVE_KEY = 'puente-auto-approve';
 
 function storageGet(key) {
@@ -165,6 +177,124 @@ function handlePeerState(state) {
   }
 }
 
+// ---------- Audio ----------
+
+function fillSelect(select, options, selected) {
+  select.replaceChildren(...options.map(({ value, label }) => new Option(label, value)));
+  select.value = options.some((option) => option.value === selected) ? selected : options[0].value;
+}
+
+async function refreshAudioDevices() {
+  if (!navigator.mediaDevices?.enumerateDevices) return;
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const real = (device) => device.deviceId && !['default', 'communications'].includes(device.deviceId);
+  elements.audioPermission.hidden = devices.some((device) => device.kind === 'audioinput' && device.label);
+
+  const sourceValue = elements.audioSource.value || storageGet(AUDIO_SOURCE_KEY);
+  fillSelect(elements.audioSource, [
+    { value: '', label: 'No enviar sonido' },
+    ...devices.filter((device) => device.kind === 'audioinput' && real(device))
+      .map((device) => ({ value: device.deviceId, label: device.label || 'Entrada de audio' })),
+  ], sourceValue);
+
+  const sinkValue = elements.audioSink.value !== 'off' ? elements.audioSink.value : storageGet(AUDIO_SINK_KEY) || 'off';
+  fillSelect(elements.audioSink, [
+    { value: 'off', label: 'No reproducir' },
+    { value: 'default', label: 'Altavoces predeterminados' },
+    ...(typeof remoteVoice.setSinkId === 'function'
+      ? devices.filter((device) => device.kind === 'audiooutput' && real(device))
+        .map((device) => ({ value: device.deviceId, label: device.label || 'Salida de audio' }))
+      : []),
+  ], sinkValue);
+}
+
+function renderAudioStatus() {
+  const sending = systemAudioTrack?.readyState === 'live'
+    ? `Enviando «${systemAudioTrack.label}».`
+    : 'No se envía sonido.';
+  let voice = 'La voz remota no se reproduce.';
+  if (elements.audioSink.value !== 'off') {
+    const place = elements.audioSink.selectedOptions[0]?.textContent || 'los altavoces';
+    voice = remoteMicOn
+      ? `El otro equipo tiene el micrófono activo: suena en ${place}.`
+      : `La voz remota sonará en ${place} cuando el otro equipo active su micrófono.`;
+  }
+  elements.audioStatus.textContent = audioError || `${sending} ${voice}`;
+  elements.audioStatus.classList.toggle('live', remoteMicOn && elements.audioSink.value !== 'off');
+  elements.audioStatus.classList.toggle('error', Boolean(audioError));
+}
+
+async function applyAudioSource(fromUser = false) {
+  const deviceId = elements.audioSource.value;
+  if (fromUser === true) storageSet(AUDIO_SOURCE_KEY, deviceId);
+  audioError = '';
+  systemAudioTrack?.stop();
+  systemAudioTrack = null;
+
+  if (deviceId && stream) {
+    try {
+      // Sonido de la computadora (por ejemplo BlackHole): sin procesar, para
+      // que no se recorte la música ni la voz de la reunión.
+      const audio = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: { exact: deviceId },
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: { ideal: 2 },
+        },
+      });
+      systemAudioTrack = audio.getAudioTracks()[0];
+      systemAudioTrack.addEventListener('ended', () => {
+        systemAudioTrack = null;
+        audioError = 'Se desconectó el dispositivo de sonido.';
+        peer?.setOutgoingAudio(null);
+        renderAudioStatus();
+      });
+      refreshAudioDevices();
+    } catch {
+      audioError = 'No se pudo abrir ese dispositivo. Revisá el permiso de micrófono de Chrome en Ajustes del Sistema.';
+    }
+  }
+
+  await peer?.setOutgoingAudio(systemAudioTrack).catch(() => {});
+  renderAudioStatus();
+}
+
+async function applyAudioSink(fromUser = false) {
+  const value = elements.audioSink.value;
+  if (fromUser === true) storageSet(AUDIO_SINK_KEY, value === 'off' ? '' : value);
+  audioError = '';
+  remoteVoice.muted = value === 'off';
+  if (value !== 'off' && typeof remoteVoice.setSinkId === 'function') {
+    try {
+      await remoteVoice.setSinkId(value === 'default' ? '' : value);
+    } catch {
+      audioError = 'No se pudo usar esa salida de audio.';
+    }
+  }
+  if (value !== 'off') remoteVoice.play().catch(() => {});
+  renderAudioStatus();
+}
+
+function handleRemoteAudio(track) {
+  remoteVoice.srcObject = new MediaStream([track]);
+  if (elements.audioSink.value !== 'off') remoteVoice.play().catch(() => {});
+}
+
+async function enableAudioAccess() {
+  try {
+    const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+    probe.getTracks().forEach((track) => track.stop());
+  } catch {
+    audioError = 'Chrome no tiene permiso de micrófono. Activalo en Ajustes del Sistema → Privacidad y seguridad → Micrófono.';
+    renderAudioStatus();
+  }
+  await refreshAudioDevices();
+  await applyAudioSource();
+  await applyAudioSink();
+}
+
 // ---------- Control remoto ----------
 
 function renderAgentStatus(status, info) {
@@ -254,6 +384,11 @@ function handleInputMessage(event, fromFastChannel) {
     handleControlRequest();
     return;
   }
+  if (!fromFastChannel && message.t === 'mic') {
+    remoteMicOn = message.on === true;
+    renderAudioStatus();
+    return;
+  }
   if (!fromFastChannel && message.t === 'release') {
     if (controlState !== 'none') revokeControl();
     return;
@@ -319,7 +454,13 @@ async function startSharing() {
       onTrack: () => {},
       onState: handlePeerState,
       onDataChannel: attachDataChannel,
+      onAudioTrack: handleRemoteAudio,
     });
+    // Sin await: si Chrome pide permiso, no frena la conexión del video.
+    refreshAudioDevices()
+      .then(() => applyAudioSource())
+      .then(() => applyAudioSink())
+      .catch(() => {});
     monitor = new ConnectionMonitor(() => peer?.peer, 'host', renderMetrics);
     monitor.start();
     signaling = new Signaling(room, 'host', {
@@ -336,6 +477,8 @@ async function startSharing() {
           await startPeer();
         } else if (message.type === 'peer-left' && message.role === 'viewer') {
           viewerPresent = false;
+          remoteMicOn = false;
+          renderAudioStatus();
           revokeControl();
           peer.close();
           renderMetrics(null);
@@ -360,6 +503,11 @@ async function startSharing() {
 }
 
 function stopSharing() {
+  systemAudioTrack?.stop();
+  systemAudioTrack = null;
+  remoteVoice.srcObject = null;
+  remoteMicOn = false;
+  renderAudioStatus();
   revokeControl();
   inputChannel = null;
   signaling?.send({ type: 'stream-stopped' });
@@ -424,6 +572,10 @@ elements.controlAllow.addEventListener('click', grantControl);
 elements.controlDeny.addEventListener('click', () => denyControl());
 elements.controlRevoke.addEventListener('click', () => revokeControl());
 elements.controlRelease.addEventListener('click', () => agent.send({ t: 'reset' }));
+elements.audioEnable.addEventListener('click', enableAudioAccess);
+elements.audioSource.addEventListener('change', () => applyAudioSource(true));
+elements.audioSink.addEventListener('change', () => applyAudioSink(true));
+navigator.mediaDevices?.addEventListener?.('devicechange', () => refreshAudioDevices().catch(() => {}));
 
 elements.autoApprove.checked = storageGet(AUTO_APPROVE_KEY) === '1';
 const savedToken = storageGet(TOKEN_KEY);

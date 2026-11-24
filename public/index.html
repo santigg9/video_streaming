@@ -41,7 +41,7 @@
           Elegir pantalla y compartir
         </button>
         <p id="start-error" class="error-message" role="alert" hidden></p>
-        <div class="browser-note">Usá Chrome o Edge. No se comparten el micrófono ni el sonido.</div>
+        <div class="browser-note">Usá Chrome o Edge. El sonido y la voz remota se activan después, en la sección «Audio».</div>
       </div>
     </section>
   </main>
@@ -126,6 +126,28 @@
             <button id="control-release" class="small-button" type="button" title="Suelta todas las teclas y botones, incluidos Control, Shift, Option y Cmd">Soltar teclas</button>
           </div>
         </div>
+      </section>
+
+      <section class="panel-section" aria-labelledby="audio-title">
+        <h2 id="audio-title">Audio</h2>
+        <p id="audio-permission" class="setting-help" hidden>
+          Para ver los dispositivos de audio, el navegador necesita permiso de micrófono.
+          <button id="audio-enable" class="text-button" type="button">Permitir acceso al audio</button>
+        </p>
+        <div class="setting-field">
+          <label for="audio-source">Sonido que se envía</label>
+          <select id="audio-source"><option value="">No enviar sonido</option></select>
+          <span class="setting-help">Para una reunión, elegí <strong>BlackHole 2ch</strong> y poné BlackHole 2ch como altavoz en la app de la reunión.</span>
+        </div>
+        <div class="setting-field">
+          <label for="audio-sink">Dónde suena la voz remota</label>
+          <select id="audio-sink">
+            <option value="off">No reproducir</option>
+            <option value="default">Altavoces predeterminados</option>
+          </select>
+          <span class="setting-help">Para hablar en la reunión, elegí <strong>BlackHole 16ch</strong> y ponelo como micrófono en la app de la reunión.</span>
+        </div>
+        <p id="audio-status" class="audio-status" role="status">Sin audio.</p>
       </section>
 
       <details class="connection-details" id="host-details">

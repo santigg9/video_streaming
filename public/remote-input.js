@@ -13,10 +13,11 @@ const revokeReasons = {
 
 // Captura el mouse y el teclado sobre el video y los manda al host.
 export class RemoteInput {
-  constructor({ frame, video, onChange }) {
+  constructor({ frame, video, onChange, onChannelOpen }) {
     this.frame = frame;
     this.video = video;
     this.onChange = onChange;
+    this.onChannelOpen = onChannelOpen;
     this.state = 'unavailable'; // unavailable | idle | requesting | active
     this.notice = '';
     this.channel = null;
@@ -41,7 +42,9 @@ export class RemoteInput {
     this.channel = channel;
     this.setState('unavailable');
     channel.addEventListener('open', () => {
-      if (this.channel === channel) this.setState('idle');
+      if (this.channel !== channel) return;
+      this.setState('idle');
+      this.onChannelOpen?.();
     });
     channel.addEventListener('close', () => {
       if (this.channel !== channel) return;
@@ -50,7 +53,10 @@ export class RemoteInput {
       this.setState('unavailable');
     });
     channel.addEventListener('message', (event) => this.handleMessage(parseMessage(event.data)));
-    if (channel.readyState === 'open') this.setState('idle');
+    if (channel.readyState === 'open') {
+      this.setState('idle');
+      this.onChannelOpen?.();
+    }
   }
 
   detach() {
