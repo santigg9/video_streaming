@@ -35,6 +35,7 @@ const elements = {
   controlAllow: document.querySelector('#control-allow'),
   controlDeny: document.querySelector('#control-deny'),
   controlRevoke: document.querySelector('#control-revoke'),
+  controlRelease: document.querySelector('#control-release'),
 };
 
 let stream;
@@ -207,6 +208,8 @@ function grantControl() {
     return;
   }
   controlState = 'granted';
+  // Arranca cada sesión de control sin teclas ni modificadores trabados.
+  agent.send({ t: 'reset' });
   sendControl({ t: 'grant' });
   renderControl();
 }
@@ -420,6 +423,7 @@ elements.autoApprove.addEventListener('change', () => {
 elements.controlAllow.addEventListener('click', grantControl);
 elements.controlDeny.addEventListener('click', () => denyControl());
 elements.controlRevoke.addEventListener('click', () => revokeControl());
+elements.controlRelease.addEventListener('click', () => agent.send({ t: 'reset' }));
 
 elements.autoApprove.checked = storageGet(AUTO_APPROVE_KEY) === '1';
 const savedToken = storageGet(TOKEN_KEY);

@@ -74,6 +74,21 @@ export const modifierFlags = {
   MetaRight: 'LeftCmd',
 };
 
+// Bit de la máscara de modificadores (ver control-protocol.js) → teclas físicas.
+export const modifierGroups = [
+  [1, ['ControlLeft', 'ControlRight']],
+  [2, ['ShiftLeft', 'ShiftRight']],
+  [4, ['AltLeft', 'AltRight']],
+  [8, ['MetaLeft', 'MetaRight']],
+];
+
+// Todas las modificadoras, para soltarlas a la fuerza aunque el agente no las
+// tenga anotadas como apretadas.
+export const allModifierKeys = [
+  'LeftControl', 'RightControl', 'LeftShift', 'RightShift',
+  'LeftAlt', 'RightAlt', 'LeftCmd', 'RightCmd',
+];
+
 export function keyFor(Key, code) {
   const name = names[code];
   return name && Key[name] !== undefined ? Key[name] : undefined;

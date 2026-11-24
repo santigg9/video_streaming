@@ -55,6 +55,16 @@ botones que hayan quedado apretados.
 | `PUENTE_SCROLL_SCALE` | `1` | Multiplica la velocidad del scroll |
 | `PUENTE_AGENT_TOKEN` | (archivo) | Fija el token a mano |
 | `PUENTE_DRY_RUN` | — | Con `1`, solo muestra los eventos en la terminal, sin mover nada |
+| `PUENTE_DEBUG` | — | Con `1`, muestra en cada clic qué teclas y botones cree el agente que están apretados |
+
+## Si el clic izquierdo sale como clic derecho
+
+En macOS, Control + clic es clic secundario: pasa cuando Control quedó
+«trabado» en el sistema (por ejemplo, por AltGr en un teclado español de
+Windows o un atajo que se quedó el navegador). El agente lo corrige solo en el
+siguiente clic, y además podés tocar **Soltar teclas** en el viewer o en el
+host. Si vuelve a pasar, iniciá el agente con `PUENTE_DEBUG=1 npm start` y
+mirá qué tecla aparece como apretada.
 
 ## Limitaciones de esta versión
 

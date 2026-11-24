@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
-import { keyFor, modifierFlags } from './keymap.js';
+import { allModifierKeys, keyFor, modifierFlags, modifierGroups } from './keymap.js';
 
 const port = Number(process.env.PUENTE_AGENT_PORT || 47800);
 const allowedOrigins = new Set(
@@ -22,6 +22,8 @@ const allowedOrigins = new Set(
 );
 const scrollScale = Number(process.env.PUENTE_SCROLL_SCALE || 1);
 const dryRun = process.env.PUENTE_DRY_RUN === '1';
+const debugMode = process.env.PUENTE_DEBUG === '1';
+const debug = (...args) => { if (debugMode) console.log('[debug]', ...args); };
 const tokenFile = path.join(os.homedir(), '.puente-agent', 'token');
 
 // ---------- Token ----------
@@ -159,6 +161,44 @@ class InputSession {
     return [Math.round(x * Math.max(width - 1, 0)), Math.round(y * Math.max(height - 1, 0))];
   }
 
+  // El viewer manda en cada clic y tecla qué modificadores tiene apretados.
+  // Si el agente cree que hay uno apretado que el viewer ya soltó (porque se
+  // perdió el "soltar"), lo suelta antes de aplicar el evento.
+  async syncModifiers(mask, exceptCode) {
+    if (!Number.isInteger(mask)) return;
+    for (const [bit, codes] of modifierGroups) {
+      if (mask & bit) continue;
+      for (const code of codes) {
+        if (code === exceptCode) continue;
+        const key = this.pressedKeys.get(code);
+        if (key === undefined) continue;
+        this.pressedKeys.delete(code);
+        console.warn(`Modificador desincronizado: se suelta ${code}.`);
+        await this.backend.keyUp([key]);
+      }
+    }
+  }
+
+  // Suelta todas las modificadoras en el sistema, aunque el agente no las tenga
+  // anotadas. Soltar una tecla que no está apretada no tiene efecto, y así se
+  // corrige el caso en que macOS quedó con Control "trabado" (Control+clic es
+  // clic secundario).
+  async forceReleaseModifiers() {
+    for (const name of allModifierKeys) {
+      const key = this.backend.Key[name];
+      if (key === undefined) continue;
+      try {
+        await this.backend.keyUp([key]);
+      } catch (error) {
+        debug(`No se pudo soltar ${name}:`, error.message);
+      }
+    }
+  }
+
+  describeState() {
+    return `teclas=[${[...this.pressedKeys.keys()].join(',')}] botones=[${[...this.pressedButtons].join(',')}]`;
+  }
+
   heldModifiers(exceptCode) {
     const keys = new Set();
     for (const code of this.pressedKeys.keys()) {
@@ -174,6 +214,9 @@ class InputSession {
         break;
       case 'd':
         this.enqueue(async () => {
+          debug(`clic ${event.b} abajo · k=${event.k ?? '-'} · ${this.describeState()}`);
+          await this.syncModifiers(event.k);
+          if (event.k === 0 && !this.heldModifiers().length) await this.forceReleaseModifiers();
           await this.backend.move(...this.toScreen(event.x, event.y));
           if (event.n >= 2 && event.b === 0) {
             // macOS reconoce el doble clic solo si el evento lo marca como tal.
@@ -187,6 +230,7 @@ class InputSession {
         break;
       case 'u':
         this.enqueue(async () => {
+          await this.syncModifiers(event.k);
           await this.backend.move(...this.toScreen(event.x, event.y));
           if (this.skipRelease.delete(event.b)) return;
           if (!this.pressedButtons.delete(event.b)) return;
@@ -200,6 +244,7 @@ class InputSession {
         const key = keyFor(this.backend.Key, event.c);
         if (key === undefined) return;
         this.enqueue(async () => {
+          await this.syncModifiers(event.k);
           const modifiers = this.heldModifiers(event.c);
           this.pressedKeys.set(event.c, key);
           await this.backend.keyDown([...modifiers, key]);
@@ -208,6 +253,7 @@ class InputSession {
       }
       case 'ku':
         this.enqueue(async () => {
+          await this.syncModifiers(event.k, event.c);
           const key = this.pressedKeys.get(event.c);
           if (key === undefined) return;
           this.pressedKeys.delete(event.c);
@@ -226,10 +272,12 @@ class InputSession {
   // el control o cuando el navegador remoto pierde el foco.
   releaseAll() {
     this.enqueue(async () => {
+      debug(`reset · ${this.describeState()}`);
       for (const [code, key] of [...this.pressedKeys].reverse()) {
         this.pressedKeys.delete(code);
         await this.backend.keyUp([key]);
       }
+      await this.forceReleaseModifiers();
       for (const button of this.pressedButtons) await this.backend.release(button);
       this.pressedButtons.clear();
       this.skipRelease.clear();
@@ -241,14 +289,15 @@ const unit = (value) => typeof value === 'number' && Number.isFinite(value) && v
 const button = (value) => value === 0 || value === 1 || value === 2;
 const delta = (value) => typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 10000;
 const code = (value) => typeof value === 'string' && /^[A-Za-z0-9]{1,24}$/.test(value);
+const mask = (value) => value === undefined || (Number.isInteger(value) && value >= 0 && value <= 15);
 
 function isValid(event) {
   if (!event || typeof event !== 'object') return false;
   switch (event.t) {
     case 'm': return unit(event.x) && unit(event.y);
-    case 'd': case 'u': return button(event.b) && unit(event.x) && unit(event.y);
+    case 'd': case 'u': return button(event.b) && unit(event.x) && unit(event.y) && mask(event.k);
     case 'w': return delta(event.dx) && delta(event.dy);
-    case 'kd': case 'ku': return code(event.c);
+    case 'kd': case 'ku': return code(event.c) && mask(event.k);
     case 'reset': return true;
     default: return false;
   }
@@ -325,7 +374,7 @@ server.on('connection', (socket, request) => {
 
 server.on('listening', () => {
   console.log('');
-  console.log(`Agente de Puente escuchando en ws://127.0.0.1:${port}${dryRun ? ' (modo simulado)' : ''}`);
+  console.log(`Agente de Puente escuchando en ws://127.0.0.1:${port}${dryRun ? ' (modo simulado)' : ''}${debugMode ? ' (diagnóstico activo)' : ''}`);
   console.log(`Orígenes permitidos: ${[...allowedOrigins].join(', ')}`);
   console.log('');
   console.log('Token para pegar en la página del host:');

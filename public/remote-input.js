@@ -1,5 +1,5 @@
 import { INPUT_CHANNEL, INPUT_FAST_CHANNEL } from './common.js';
-import { parseMessage } from './control-protocol.js';
+import { modifierMaskOf, parseMessage } from './control-protocol.js';
 
 const denyReasons = {
   agent: 'La otra computadora no tiene el agente de control conectado.',
@@ -121,8 +121,11 @@ export class RemoteInput {
     }
   }
 
+  // Pide al agente que suelte todo, incluidos los modificadores que el sistema
+  // pueda tener "trabados". Se manda siempre que haya control, aunque acá no
+  // quede nada anotado: el problema puede estar del otro lado.
   releaseAll() {
-    if (this.buttons.size || this.keys.size) this.send({ t: 'reset' });
+    if (this.active || this.buttons.size || this.keys.size) this.send({ t: 'reset' });
     this.buttons.clear();
     this.keys.clear();
   }
@@ -186,7 +189,7 @@ export class RemoteInput {
       frame.focus({ preventScroll: true });
       this.flush();
       this.buttons.add(event.button);
-      this.send({ t: 'd', b: event.button, x: point.x, y: point.y, n: event.detail || 1 });
+      this.send({ t: 'd', b: event.button, x: point.x, y: point.y, n: event.detail || 1, k: modifierMaskOf(event) });
     });
 
     frame.addEventListener('mouseup', (event) => {
@@ -195,7 +198,7 @@ export class RemoteInput {
       const point = this.position(event);
       this.flush();
       this.buttons.delete(event.button);
-      this.send({ t: 'u', b: event.button, x: point?.x ?? 0, y: point?.y ?? 0 });
+      this.send({ t: 'u', b: event.button, x: point?.x ?? 0, y: point?.y ?? 0, k: modifierMaskOf(event) });
     });
 
     frame.addEventListener('contextmenu', (event) => {
@@ -220,16 +223,18 @@ export class RemoteInput {
       event.preventDefault();
       this.flush();
       this.keys.add(event.code);
-      this.send({ t: 'kd', c: event.code });
+      this.send({ t: 'kd', c: event.code, k: modifierMaskOf(event) });
     });
 
-    frame.addEventListener('keyup', (event) => {
+    // El "soltar" se escucha en toda la ventana: si el foco se movió mientras la
+    // tecla estaba apretada (por ejemplo con un atajo del navegador), igual llega.
+    window.addEventListener('keyup', (event) => {
       if (!this.keys.has(event.code)) return;
-      event.preventDefault();
+      if (this.active) event.preventDefault();
       this.flush();
       this.keys.delete(event.code);
-      this.send({ t: 'ku', c: event.code });
-    });
+      this.send({ t: 'ku', c: event.code, k: modifierMaskOf(event) });
+    }, true);
 
     // Si el video pierde el foco, nada debe quedar apretado en la otra computadora.
     frame.addEventListener('blur', () => this.releaseAll());

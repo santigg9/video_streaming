@@ -13,6 +13,7 @@ const fullscreen = document.querySelector('#fullscreen-button');
 const routeSummary = document.querySelector('#viewer-route-summary');
 const controlButton = document.querySelector('#control-button');
 const controlLabel = controlButton.querySelector('span');
+const releaseButton = document.querySelector('#release-button');
 const note = document.querySelector('#viewer-note');
 const defaultNote = note.textContent;
 
@@ -101,6 +102,7 @@ const remoteInput = new RemoteInput({
     controlLabel.textContent = labels[state];
     controlButton.disabled = state === 'unavailable';
     controlButton.classList.toggle('active', state === 'active');
+    releaseButton.hidden = state !== 'active';
     note.textContent = notice
       || (state === 'active' ? 'Estás controlando la otra computadora. Hacé clic fuera del video para dejar de enviar el teclado.' : defaultNote);
     note.classList.toggle('notice', Boolean(notice));
@@ -166,6 +168,10 @@ peer.signaling = signaling;
 signaling.connect();
 
 controlButton.addEventListener('click', () => remoteInput.toggle());
+releaseButton.addEventListener('click', () => {
+  remoteInput.releaseAll();
+  note.textContent = 'Se soltaron todas las teclas y botones en la otra computadora.';
+});
 
 // En pantalla completa, Keyboard Lock (Chrome/Edge) deja pasar a la otra computadora atajos
 // que el navegador normalmente se queda, como Esc o Cmd+Tab.
