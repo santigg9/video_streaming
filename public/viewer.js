@@ -14,6 +14,8 @@ const routeSummary = document.querySelector('#viewer-route-summary');
 const controlButton = document.querySelector('#control-button');
 const controlLabel = controlButton.querySelector('span');
 const releaseButton = document.querySelector('#release-button');
+const swapButton = document.querySelector('#swap-button');
+const SWAP_KEY = 'puente-swap-ctrl-cmd';
 const soundButton = document.querySelector('#sound-button');
 const soundLabel = soundButton.querySelector('span');
 const micButton = document.querySelector('#mic-button');
@@ -111,6 +113,7 @@ const remoteInput = new RemoteInput({
     controlButton.disabled = state === 'unavailable';
     controlButton.classList.toggle('active', state === 'active');
     releaseButton.hidden = state !== 'active';
+    swapButton.hidden = state !== 'active';
     note.textContent = notice
       || (state === 'active' ? 'Estás controlando la otra computadora. Hacé clic fuera del video para dejar de enviar el teclado.' : defaultNote);
     note.classList.toggle('notice', Boolean(notice));
@@ -226,6 +229,33 @@ micButton.addEventListener('click', async () => {
     renderAudioButtons();
   }
 });
+function renderSwap() {
+  swapButton.setAttribute('aria-pressed', String(remoteInput.swapCtrlCmd));
+  swapButton.classList.toggle('active', remoteInput.swapCtrlCmd);
+  swapButton.querySelector('span').textContent = remoteInput.swapCtrlCmd ? 'Ctrl → Cmd: sí' : 'Ctrl → Cmd: no';
+}
+
+try {
+  remoteInput.setSwapCtrlCmd(localStorage.getItem(SWAP_KEY) === '1');
+} catch {
+  // Sin almacenamiento: queda desactivado.
+}
+renderSwap();
+
+swapButton.addEventListener('click', () => {
+  remoteInput.setSwapCtrlCmd(!remoteInput.swapCtrlCmd);
+  try {
+    localStorage.setItem(SWAP_KEY, remoteInput.swapCtrlCmd ? '1' : '0');
+  } catch {
+    // Se mantiene solo mientras la página esté abierta.
+  }
+  renderSwap();
+  note.textContent = remoteInput.swapCtrlCmd
+    ? 'Ctrl de tu teclado ahora funciona como Cmd en el Mac (Ctrl+C copia, Ctrl+V pega).'
+    : 'Ctrl vuelve a ser Control en el Mac.';
+  frame.focus({ preventScroll: true });
+});
+
 releaseButton.addEventListener('click', () => {
   remoteInput.releaseAll();
   note.textContent = 'Se soltaron todas las teclas y botones en la otra computadora.';

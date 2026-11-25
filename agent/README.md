@@ -66,6 +66,13 @@ siguiente clic, y además podés tocar **Soltar teclas** en el viewer o en el
 host. Si vuelve a pasar, iniciá el agente con `PUENTE_DEBUG=1 npm start` y
 mirá qué tecla aparece como apretada.
 
+## Ctrl ↔ Cmd desde Windows
+
+Desde un viewer en Windows no se puede apretar Cmd: la tecla Windows la toma el
+sistema. Mientras tenés el control, tocá **Ctrl → Cmd** en la barra del viewer:
+Ctrl pasa a funcionar como Cmd en el Mac (Ctrl+C copia, Ctrl+V pega)
+y la tecla Windows como Control. La opción queda guardada en ese navegador.
+
 ## Limitaciones de esta versión
 
 - Controla la **pantalla principal**. Si compartís otro monitor, las coordenadas
@@ -76,4 +83,6 @@ mirá qué tecla aparece como apretada.
 - **Windows:** no se pueden controlar las ventanas abiertas como administrador
   (salvo que el agente también corra como administrador), ni el aviso de UAC, la
   pantalla de bloqueo o Ctrl+Alt+Supr.
-- La escritura con IME (chino) y el mapeo Ctrl↔Cmd llegan en la fase 2.
+- AltGr (por ejemplo para `@` en teclado español) llega al Mac como
+  Control+Option y no escribe el carácter. La escritura por texto llega en la
+  fase 2.

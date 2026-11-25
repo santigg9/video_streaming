@@ -27,6 +27,7 @@ export class RemoteInput {
     this.frameRequest = 0;
     this.buttons = new Set();
     this.keys = new Set();
+    this.swapCtrlCmd = false;
     this.bindEvents();
   }
 
@@ -143,6 +144,35 @@ export class RemoteInput {
     this.pendingWheel = { dx: 0, dy: 0 };
   }
 
+  // ---------- Teclado: Ctrl ↔ Cmd ----------
+
+  // Desde Windows la tecla Windows la toma el sistema, así que no hay forma de
+  // apretar Cmd. Con el intercambio activo, Ctrl llega al Mac como Cmd (Ctrl+C
+  // copia) y la tecla Windows llega como Control.
+  setSwapCtrlCmd(enabled) {
+    if (this.swapCtrlCmd === enabled) return;
+    this.releaseAll();
+    this.swapCtrlCmd = enabled;
+  }
+
+  mapCode(code) {
+    if (!this.swapCtrlCmd) return code;
+    const swaps = {
+      ControlLeft: 'MetaLeft',
+      ControlRight: 'MetaRight',
+      MetaLeft: 'ControlLeft',
+      MetaRight: 'ControlRight',
+    };
+    return swaps[code] || code;
+  }
+
+  modifiers(event) {
+    const mask = modifierMaskOf(event);
+    if (!this.swapCtrlCmd) return mask;
+    // Intercambia el bit de Ctrl (1) con el de Meta (8).
+    return (mask & ~9) | (mask & 1 ? 8 : 0) | (mask & 8 ? 1 : 0);
+  }
+
   // ---------- Coordenadas ----------
 
   // El video usa object-fit: contain, así que puede tener franjas negras.
@@ -195,7 +225,7 @@ export class RemoteInput {
       frame.focus({ preventScroll: true });
       this.flush();
       this.buttons.add(event.button);
-      this.send({ t: 'd', b: event.button, x: point.x, y: point.y, n: event.detail || 1, k: modifierMaskOf(event) });
+      this.send({ t: 'd', b: event.button, x: point.x, y: point.y, n: event.detail || 1, k: this.modifiers(event) });
     });
 
     frame.addEventListener('mouseup', (event) => {
@@ -204,7 +234,7 @@ export class RemoteInput {
       const point = this.position(event);
       this.flush();
       this.buttons.delete(event.button);
-      this.send({ t: 'u', b: event.button, x: point?.x ?? 0, y: point?.y ?? 0, k: modifierMaskOf(event) });
+      this.send({ t: 'u', b: event.button, x: point?.x ?? 0, y: point?.y ?? 0, k: this.modifiers(event) });
     });
 
     frame.addEventListener('contextmenu', (event) => {
@@ -229,7 +259,7 @@ export class RemoteInput {
       event.preventDefault();
       this.flush();
       this.keys.add(event.code);
-      this.send({ t: 'kd', c: event.code, k: modifierMaskOf(event) });
+      this.send({ t: 'kd', c: this.mapCode(event.code), k: this.modifiers(event) });
     });
 
     // El "soltar" se escucha en toda la ventana: si el foco se movió mientras la
@@ -239,7 +269,7 @@ export class RemoteInput {
       if (this.active) event.preventDefault();
       this.flush();
       this.keys.delete(event.code);
-      this.send({ t: 'ku', c: event.code, k: modifierMaskOf(event) });
+      this.send({ t: 'ku', c: this.mapCode(event.code), k: this.modifiers(event) });
     }, true);
 
     // Si el video pierde el foco, nada debe quedar apretado en la otra computadora.

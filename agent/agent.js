@@ -246,8 +246,14 @@ class InputSession {
         this.enqueue(async () => {
           await this.syncModifiers(event.k);
           const modifiers = this.heldModifiers(event.c);
+          // Al apretar una modificadora, su propio evento tiene que llevar su
+          // flag (Shift abajo con Shift marcado). Si no, macOS y apps como
+          // IntelliJ no registran la pulsación: por ejemplo, Shift dos veces.
+          const self = modifierFlags[event.c] ? this.backend.Key[modifierFlags[event.c]] : undefined;
+          const flags = self !== undefined && !modifiers.includes(self) ? [...modifiers, self] : modifiers;
+          debug(`tecla ${event.c} abajo · k=${event.k ?? '-'}`);
           this.pressedKeys.set(event.c, key);
-          await this.backend.keyDown([...modifiers, key]);
+          await this.backend.keyDown([...flags, key]);
         });
         break;
       }
@@ -256,6 +262,7 @@ class InputSession {
           await this.syncModifiers(event.k, event.c);
           const key = this.pressedKeys.get(event.c);
           if (key === undefined) return;
+          debug(`tecla ${event.c} arriba · k=${event.k ?? '-'}`);
           this.pressedKeys.delete(event.c);
           await this.backend.keyUp([...this.heldModifiers(event.c), key]);
         });
